@@ -1,9 +1,17 @@
 using Base
 
 # Function to calculate the least common multiple (LCM)
+
+# lcm(a,b) - calcluates the least common multiple of a and b  
+# Input : a,b - integers (BigInt)
+# Output : lcm (BigInt) - least common multiple of a and b
 function lcm(a::BigInt, b::BigInt)::BigInt
     return abs(a * b) ÷ gcd(a, b)
 end
+
+# lcm_list(list) - calculates the least common multiple of a list of integers
+# Input : list - list of integers (BigInt)
+# Output : lcm (BigInt) - least common multiple of the list
 function lcm_list(list::Vector{BigInt})::BigInt
     
     result = list[1]
@@ -12,44 +20,50 @@ function lcm_list(list::Vector{BigInt})::BigInt
     end
     return result
 end
-# This does the greedy algorithm
-function get_proposed_bound(p::Int, q::Int, rank::Int)::Int
+# get_proposed_bound (p,q,rank) - calculates the greedy algotithm bound for given parameters
+# Input : p,q - integers (BigInt) - the two primes
+#         rank - integer (Int) - the rank of the solution
+# Output : proposed_bound (Int) - the proposed bound for the solution
+function get_proposed_bound(p::BigInt, q::BigInt, rank::Int)::BigInt
     highest_power = 25
-    first_denoms = []
+    first_denoms = BigInt[]
 
     for i in 0:highest_power-1
         for j in 0:highest_power-1
             if i + j > 0             
-                push!(first_denoms, p^i * q^j)
+                push!(first_denoms, BigInt(p)^i * BigInt(q)^j)
             end
         end
     end
 
     first_denoms = sort(first_denoms)
     possible_denoms = unique(first_denoms)
-    partial_solution = []
-    total_sum = 0
+    partial_solution = BigInt[]
+    total_sum = Rational{BigInt}(0, 1)
 
     for denominator in possible_denoms
-        if total_sum + 1 // denominator < 1 && length(partial_solution) < rank - 1
-            total_sum += 1 // denominator
+        if total_sum + Rational{BigInt}(1, denominator) < 1 && length(partial_solution) < rank - 1
+            total_sum += Rational{BigInt}(1, denominator)
             push!(partial_solution, denominator)
         end
     end
 
-    proposed_bound = reduce(lcm, partial_solution)
+    denom_bound = Rational{BigInt}(1, 1) / (1 - total_sum)
+
+    counter = 1
+    while possible_denoms[counter] < denom_bound
+        counter += 1
+    end
+    proposed_bound = possible_denoms[counter]
+
     return proposed_bound
 end
 
-function sum_list(denom_list::Vector{Int})::Float64
-    running_sum = 0 // 1
-    for denom in denom_list
-        running_sum += 1 // denom
-    end
-    return running_sum
-end
+# sum_list(denom_list) - calculates the sum of the reciprocals of a list of integers
+# Input : denom_list - list of integers (BigInt)
+# Output : sum (Rational{BigInt}) - the sum the reciprocals of the list
 
-function modified_sum_list(denom_list::Vector{BigInt})::Rational{BigInt}
+function sum_list(denom_list::Vector{BigInt})::Rational{BigInt}
     running_sum = Rational{BigInt}(0, 1)
   
     if length(denom_list) == 0
@@ -66,8 +80,15 @@ function modified_sum_list(denom_list::Vector{BigInt})::Rational{BigInt}
     return Rational{BigInt}(numerator, denominator)
 end
 
+#get_solutions(possible_denoms, rank, running_sol, list_of_solutions) - recursive function to find all solutions
+# Input : possible_denoms - list of integers (BigInt) - the possible denominators
+#         rank - integer (Int) - the rank of the solution
+#         running_sol - list of integers (BigInt) - the current solution being built
+#         list_of_solutions - list of lists of integers (BigInt) - the list of all solutions found
+# Output : None - the function modifies list_of_solutions in place
+
 function get_solutions(possible_denoms::Vector{Any}, rank::Int, running_sol::Vector{BigInt}, list_of_solutions::Vector{Any})
-    running_sum = modified_sum_list(running_sol)  # Returns Rational{BigInt}
+    running_sum = sum_list(running_sol)  # Returns Rational{BigInt}
     if running_sol == [2, 3, 8, 27, 243, 2048, 41472, 524288, 10616832]
        println("Found the solution: ", running_sol)
         print("Running sum is: ", running_sum, "\n")       
@@ -80,11 +101,6 @@ function get_solutions(possible_denoms::Vector{Any}, rank::Int, running_sol::Vec
         return
     elseif running_sum == 1 && length(running_sol) == rank
         push!(list_of_solutions, copy(running_sol))
-        #Uncommment this if you want to look at a small portion of the solutions
-        # -- honestly, you can modify this however you want and can look for specific denominator or solution also
-        #=if length(list_of_solutions) < 100
-            println(running_sol[end])
-        end=#
         return
     elseif length(running_sol) >= rank
         return
@@ -106,13 +122,17 @@ function get_solutions(possible_denoms::Vector{Any}, rank::Int, running_sol::Vec
         end
     end
 end
+
 function main()
 
-    #CHANGE THESE TO USE DIFFERENT PRIMES AND RANKS
+    #Initialize  parameters
     p = 2
-    q = 5
-    rank = 11
+    q = 13
+    rank = 7
     highest_power = 25
+
+
+    # Generate list of possible denominators
     first_denoms = []
     println("Starting with p = ", p, " q = ", q, " rank = ", rank)
     for i in 0:highest_power-1
@@ -126,26 +146,26 @@ function main()
 
     possible_denoms = sort(unique(first_denoms))
 
+
     list_of_solutions = []
   
-
+    #Generate all possible solutions
     get_solutions(possible_denoms, rank, BigInt[], list_of_solutions)
 
     
-    print("There are ", length(list_of_solutions), " solutions\n")
-    #for solution in list_of_solutions
-        #print( solution, "\n")
-   # end
-
-   max_denominator = 0
+    max_denominator = 0
     for solution in list_of_solutions
-       for item in solution
+        for item in solution
             if item > max_denominator
                 max_denominator = item
             end
         end
     end
-    print("Max denominator is: ", max_denominator, "\n")
+
+
+
+    # Find the prime factorization of the maximum denominator
+
     exp_p, exp_q = 0, 0
     to_factor = max_denominator
 
@@ -163,6 +183,7 @@ function main()
         exp_q += 1
     end
 
+    #write the list of solution to a file 
     open("solutions.txt", "w") do file
         for solution in list_of_solutions
             write(file, join(solution, ", "), "\n")  # Write each solution as a comma-separated line
@@ -170,7 +191,23 @@ function main()
     end
     println("Solutions written to solutions.txt")
 
+    print("There are ", length(list_of_solutions), " solutions\n")
+
+    # UNCOMMENT TO PRINT ALL SOLUTIONS
+    #for solution in list_of_solutions
+        #print( solution, "\n")
+   # end
+
     println("The maximum denominator that appears is: ", max_denominator, " which is 2^", exp_p, " * ", q, "^", exp_q)
+
+    greedy_bound = get_proposed_bound(BigInt(p), BigInt(q), rank)
+    println("The greedy bound is: ", greedy_bound)
+    if max_denominator > greedy_bound
+        println("WARNING: The greedy bound fails in this case")
+    else
+        println("The maximum denominator is less than the greedy bound")
+    end
+
 end 
 
 main()
